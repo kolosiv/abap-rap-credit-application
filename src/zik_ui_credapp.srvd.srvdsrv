@@ -1,0 +1,5 @@
+@EndUserText.label: 'Credit Application UI service'
+define service ZIK_UI_CREDAPP {
+  expose ZIK_C_CREDAPP as CreditApplication;
+  expose ZIK_C_INCOME  as IncomeSource;
+}

@@ -1,0 +1,45 @@
+@Metadata.layer: #CORE
+annotate entity ZIK_C_CREDAPP with
+{
+  @UI.facet: [ { id:       'Application',
+                 purpose:  #STANDARD,
+                 type:     #IDENTIFICATION_REFERENCE,
+                 label:    'Credit Application',
+                 position: 10 },
+               { id:            'Income',
+                 purpose:       #STANDARD,
+                 type:          #LINEITEM_REFERENCE,
+                 label:         'Income Sources',
+                 position:      20,
+                 targetElement: '_Income' } ]
+
+  @UI: { lineItem: [ { position: 10 } ], identification: [ { position: 10 } ] }
+  ApplicationId;
+
+  @UI: { lineItem: [ { position: 20 } ], identification: [ { position: 20 } ] }
+  CustomerId;
+
+  @UI: { lineItem: [ { position: 30 } ], identification: [ { position: 30 } ] }
+  ProductId;
+
+  @UI: { lineItem: [ { position: 40 } ], identification: [ { position: 40 } ] }
+  Amount;
+
+  @UI: { identification: [ { position: 45 } ] }
+  CurrencyCode;
+
+  @UI: { lineItem: [ { position: 50 } ], identification: [ { position: 50 } ] }
+  TermMonths;
+
+  @UI: { identification: [ { position: 55 } ] }
+  InterestRate;
+
+  @UI: { lineItem: [ { position: 60 } ], identification: [ { position: 60 } ] }
+  Status;
+
+  @UI: { identification: [ { position: 65 } ] }
+  MonthlyPayment;
+
+  @UI: { identification: [ { position: 70 } ] }
+  TotalIncome;
+}

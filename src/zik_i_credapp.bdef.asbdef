@@ -1,0 +1,80 @@
+managed implementation in class zbp_ik_i_credapp unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZIK_I_CREDAPP alias CreditApplication
+early numbering
+draft table zik_d_credapp
+persistent table zik_a_credapp
+lock master total etag LastChangedAt
+authorization master ( global )
+etag master LastChangedAt
+{
+  create;
+  update;
+  delete;
+
+  association _Income { create; with draft; }
+
+  draft action Resume;
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+  draft determine action Prepare;
+
+  field ( readonly ) ApplicationId;
+  field ( readonly ) InterestRate, MonthlyPayment, TotalIncome, Status;
+  field ( readonly ) SubmittedAt, DecidedAt, DecidedBy;
+  field ( readonly ) CreatedBy, CreatedAt, LastChangedBy, LastChangedAt, LocalLastChangedAt;
+
+  mapping for zik_a_credapp
+  {
+    ApplicationId      = application_id;
+    CustomerId         = customer_id;
+    ProductId          = product_id;
+    Amount             = amount;
+    CurrencyCode       = currency_code;
+    TermMonths         = term_months;
+    InterestRate       = interest_rate;
+    MonthlyPayment     = monthly_payment;
+    TotalIncome        = total_income;
+    Status             = status;
+    SubmittedAt        = submitted_at;
+    DecidedAt          = decided_at;
+    DecidedBy          = decided_by;
+    CreatedBy          = created_by;
+    CreatedAt          = created_at;
+    LastChangedBy      = last_changed_by;
+    LastChangedAt      = last_changed_at;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}
+
+define behavior for ZIK_I_INCOME alias Income
+early numbering
+persistent table zik_a_income
+draft table zik_d_income
+lock dependent by _Application
+authorization dependent by _Application
+etag dependent by _Application
+{
+  update;
+  delete;
+
+  association _Application { with draft; }
+
+  field ( readonly ) ApplicationId, IncomeId;
+  field ( readonly ) LocalLastChangedAt;
+
+  mapping for zik_a_income
+  {
+    ApplicationId      = application_id;
+    IncomeId           = income_id;
+    IncomeType         = income_type;
+    MonthlyAmount      = monthly_amount;
+    CurrencyCode       = currency_code;
+    IsDocumented       = is_documented;
+    EmployerName       = employer_name;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+}

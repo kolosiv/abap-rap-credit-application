@@ -1,0 +1,27 @@
+@Metadata.layer: #CORE
+annotate entity ZIK_C_INCOME with
+{
+  @UI.lineItem: [ { position: 10 } ]
+  @UI.identification: [ { position: 10 } ]
+  IncomeId;
+
+  @UI.lineItem: [ { position: 20 } ]
+  @UI.identification: [ { position: 20 } ]
+  IncomeType;
+
+  @UI.lineItem: [ { position: 30 } ]
+  @UI.identification: [ { position: 30 } ]
+  MonthlyAmount;
+
+  @UI.lineItem: [ { position: 35 } ]
+  @UI.identification: [ { position: 35 } ]
+  CurrencyCode;
+
+  @UI.lineItem: [ { position: 40 } ]
+  @UI.identification: [ { position: 40 } ]
+  EmployerName;
+
+  @UI.lineItem: [ { position: 50 } ]
+  @UI.identification: [ { position: 50 } ]
+  IsDocumented;
+}

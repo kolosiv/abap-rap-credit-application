@@ -1,0 +1,25 @@
+projection;
+use draft;
+
+define behavior for ZIK_C_CREDAPP alias CreditApplication
+{
+  use create;
+  use update;
+  use delete;
+
+  use action Edit;
+  use action Activate;
+  use action Discard;
+  use action Resume;
+  use action Prepare;
+
+  use association _Income { create; with draft; }
+}
+
+define behavior for ZIK_C_INCOME alias Income
+{
+  use update;
+  use delete;
+
+  use association _Application { with draft; }
+}

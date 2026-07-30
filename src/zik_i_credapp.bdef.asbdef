@@ -22,6 +22,10 @@ etag master LastChangedAt
   draft action Discard;
   draft determine action Prepare;
 
+  determination setInitialStatus on modify { create; }
+  determination copyInterestRate on modify { create; field ProductId; }
+  determination calculateMonthlyPayment on modify { create; field Amount, TermMonths, InterestRate; }
+
   field ( readonly ) ApplicationId;
   field ( readonly ) InterestRate, MonthlyPayment, TotalIncome, Status;
   field ( readonly ) SubmittedAt, DecidedAt, DecidedBy;
@@ -62,6 +66,8 @@ etag dependent by _Application
   delete;
 
   association _Application { with draft; }
+
+  determination calculateTotalIncome on modify { create; field MonthlyAmount, CurrencyCode; delete; }
 
   field ( readonly ) ApplicationId, IncomeId;
   field ( readonly ) LocalLastChangedAt;

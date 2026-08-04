@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZIK_CREDAPP</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Credit application messages</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Enter a product</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>002</MSGNR>
+     <TEXT>Product &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>003</MSGNR>
+     <TEXT>Enter a customer</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>004</MSGNR>
+     <TEXT>Customer &amp;1 does not exist</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>005</MSGNR>
+     <TEXT>Amount &amp;1 must be between &amp;2 and &amp;3 &amp;4</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>006</MSGNR>
+     <TEXT>Term &amp;1 months must be between &amp;2 and &amp;3 months</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>007</MSGNR>
+     <TEXT>Debt-to-income ratio &amp;1 % exceeds the limit of &amp;2 %</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>008</MSGNR>
+     <TEXT>Enter at least one income source</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZIK_CREDAPP</ARBGB>
+     <MSGNR>009</MSGNR>
+     <TEXT>Exchange rate from &amp;1 to &amp;2 not found</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>

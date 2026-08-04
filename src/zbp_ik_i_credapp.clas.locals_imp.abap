@@ -1,5 +1,16 @@
 CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
+    CONSTANTS dti_limit_percent TYPE i VALUE 50.
+
+    " state areas - one per validation, so each validation clears only its own messages
+    CONSTANTS: BEGIN OF state_area,
+                 product  TYPE string VALUE 'VALIDATE_PRODUCT',
+                 customer TYPE string VALUE 'VALIDATE_CUSTOMER',
+                 amount   TYPE string VALUE 'VALIDATE_AMOUNT',
+                 term     TYPE string VALUE 'VALIDATE_TERM',
+                 dti      TYPE string VALUE 'VALIDATE_DTI',
+               END OF state_area.
+
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR CreditApplication
       RESULT result.
@@ -9,6 +20,16 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR CreditApplication~copyInterestRate.
     METHODS calculateMonthlyPayment FOR DETERMINE ON MODIFY
       IMPORTING keys FOR CreditApplication~calculateMonthlyPayment.
+    METHODS validateProduct FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CreditApplication~validateProduct.
+    METHODS validateCustomer FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CreditApplication~validateCustomer.
+    METHODS validateAmount FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CreditApplication~validateAmount.
+    METHODS validateTerm FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CreditApplication~validateTerm.
+    METHODS validateDTI FOR VALIDATE ON SAVE
+      IMPORTING keys FOR CreditApplication~validateDTI.
 
     METHODS earlynumbering_create FOR NUMBERING
       IMPORTING entities FOR CREATE CreditApplication.
@@ -183,6 +204,275 @@ CLASS lhc_credapp IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD validateProduct.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( ProductId )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    " clear own state messages of the previous run - unconditionally, for every instance
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
+      APPEND VALUE #( %tky        = <ca>-%tky
+                      %state_area = state_area-product ) TO reported-creditapplication.
+    ENDLOOP.
+
+    DATA(credprod) = credapps.
+    DELETE credprod WHERE ProductId IS INITIAL.
+    IF credprod IS NOT INITIAL.
+      SELECT ProductId
+        FROM zik_i_product WITH PRIVILEGED ACCESS
+        FOR ALL ENTRIES IN @credprod
+        WHERE ProductId = @credprod-ProductId
+        INTO TABLE @DATA(products).
+    ENDIF.
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>).
+      IF <credapp>-ProductId IS INITIAL.
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky              = <credapp>-%tky
+                        %state_area       = state_area-product
+                        %msg              = new_message( id       = 'ZIK_CREDAPP'
+                                                         number   = '001'
+                                                         severity = if_abap_behv_message=>severity-error )
+                        %element-ProductId = if_abap_behv=>mk-on ) TO reported-creditapplication.
+      ELSEIF NOT line_exists( products[ ProductId = <credapp>-ProductId ] ).
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky              = <credapp>-%tky
+                        %state_area       = state_area-product
+                        %msg              = new_message( id       = 'ZIK_CREDAPP'
+                                                         number   = '002'
+                                                         severity = if_abap_behv_message=>severity-error
+                                                         v1       = <credapp>-ProductId )
+                        %element-ProductId = if_abap_behv=>mk-on ) TO reported-creditapplication.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD validateCustomer.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+    ENTITY CreditApplication
+      FIELDS ( CustomerId )
+      WITH CORRESPONDING #( keys )
+    RESULT DATA(credapps).
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
+      APPEND VALUE #( %tky        = <ca>-%tky
+                      %state_area = state_area-customer ) TO reported-creditapplication.
+    ENDLOOP.
+
+    DATA(credcust) = credapps.
+    DELETE credcust WHERE CustomerId IS INITIAL.
+    IF credcust IS NOT INITIAL.
+      SELECT CustomerId
+        FROM zik_i_customer WITH PRIVILEGED ACCESS
+        FOR ALL ENTRIES IN @credcust
+        WHERE CustomerId = @credcust-CustomerId
+        INTO TABLE @DATA(customers).
+    ENDIF.
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>).
+      IF <credapp>-CustomerId IS INITIAL.
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky              = <credapp>-%tky
+                        %state_area       = state_area-customer
+                        %msg              = new_message( id       = 'ZIK_CREDAPP'
+                                                         number   = '003'
+                                                         severity = if_abap_behv_message=>severity-error )
+                        %element-CustomerId = if_abap_behv=>mk-on ) TO reported-creditapplication.
+      ELSEIF NOT line_exists( customers[ CustomerId = <credapp>-CustomerId ] ).
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky              = <credapp>-%tky
+                        %state_area       = state_area-customer
+                        %msg              = new_message( id       = 'ZIK_CREDAPP'
+                                                         number   = '004'
+                                                         severity = if_abap_behv_message=>severity-error
+                                                         v1       = <credapp>-CustomerId )
+                        %element-CustomerId = if_abap_behv=>mk-on ) TO reported-creditapplication.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD validateAmount.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( ProductId Amount CurrencyCode )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    " must happen BEFORE the early RETURN below, otherwise stale messages would stick
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
+      APPEND VALUE #( %tky        = <ca>-%tky
+                      %state_area = state_area-amount ) TO reported-creditapplication.
+    ENDLOOP.
+
+    DATA(credprod) = credapps.
+    DELETE credprod WHERE ProductId IS INITIAL.
+    IF credprod IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    SELECT ProductId, MinAmount, MaxAmount, CurrencyCode
+      FROM zik_i_product WITH PRIVILEGED ACCESS
+      FOR ALL ENTRIES IN @credprod
+      WHERE ProductId = @credprod-ProductId
+      INTO TABLE @DATA(products).
+
+    SELECT from_currency, to_currency, rate
+      FROM zik_a_fxrate WITH PRIVILEGED ACCESS
+      INTO TABLE @DATA(rates).
+
+    DATA amount_in_product_ccy TYPE zik_a_credapp-amount.
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>).
+
+      " the product itself is checked by validateProduct - skip here to avoid duplicate messages
+      READ TABLE products ASSIGNING FIELD-SYMBOL(<product>)
+           WITH KEY ProductId = <credapp>-ProductId.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+
+      " limits are stored in the product's currency - convert the loan amount into it
+      IF <credapp>-CurrencyCode = <product>-CurrencyCode.
+        amount_in_product_ccy = <credapp>-Amount.
+      ELSE.
+        DATA(rate) = VALUE #( rates[ from_currency = <credapp>-CurrencyCode
+                                     to_currency   = <product>-CurrencyCode ]-rate OPTIONAL ).
+        IF rate IS INITIAL.
+          APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+          APPEND VALUE #( %tky                  = <credapp>-%tky
+                          %state_area           = state_area-amount
+                          %msg                  = new_message( id       = 'ZIK_CREDAPP'
+                                                               number   = '009'
+                                                               severity = if_abap_behv_message=>severity-error
+                                                               v1       = <credapp>-CurrencyCode
+                                                               v2       = <product>-CurrencyCode )
+                          %element-CurrencyCode = if_abap_behv=>mk-on ) TO reported-creditapplication.
+          CONTINUE.
+        ENDIF.
+        amount_in_product_ccy = <credapp>-Amount * rate.
+      ENDIF.
+
+      IF amount_in_product_ccy < <product>-MinAmount
+      OR amount_in_product_ccy > <product>-MaxAmount.
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky            = <credapp>-%tky
+                        %state_area     = state_area-amount
+                        %msg            = new_message( id       = 'ZIK_CREDAPP'
+                                                       number   = '005'
+                                                       severity = if_abap_behv_message=>severity-error
+                                                       v1       = |{ amount_in_product_ccy }|
+                                                       v2       = |{ <product>-MinAmount }|
+                                                       v3       = |{ <product>-MaxAmount }|
+                                                       v4       = <product>-CurrencyCode )
+                        %element-Amount = if_abap_behv=>mk-on ) TO reported-creditapplication.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD validateTerm.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( ProductId TermMonths )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
+      APPEND VALUE #( %tky        = <ca>-%tky
+                      %state_area = state_area-term ) TO reported-creditapplication.
+    ENDLOOP.
+
+    DATA(credprod) = credapps.
+    DELETE credprod WHERE ProductId IS INITIAL.
+    IF credprod IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    SELECT ProductId, MinTermMonths, MaxTermMonths
+      FROM zik_i_product WITH PRIVILEGED ACCESS
+      FOR ALL ENTRIES IN @credprod
+      WHERE ProductId = @credprod-ProductId
+      INTO TABLE @DATA(products).
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>).
+
+      READ TABLE products ASSIGNING FIELD-SYMBOL(<product>)
+           WITH KEY ProductId = <credapp>-ProductId.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+
+      IF <credapp>-TermMonths < <product>-MinTermMonths
+      OR <credapp>-TermMonths > <product>-MaxTermMonths.
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky                = <credapp>-%tky
+                        %state_area         = state_area-term
+                        %msg                = new_message( id       = 'ZIK_CREDAPP'
+                                                           number   = '006'
+                                                           severity = if_abap_behv_message=>severity-error
+                                                           v1       = |{ CONV i( <credapp>-TermMonths ) }|
+                                                           v2       = |{ CONV i( <product>-MinTermMonths ) }|
+                                                           v3       = |{ CONV i( <product>-MaxTermMonths ) }| )
+                        %element-TermMonths = if_abap_behv=>mk-on ) TO reported-creditapplication.
+      ENDIF.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD validateDTI.
+
+    " MonthlyPayment and TotalIncome are already filled by the determinations:
+    " the interaction phase completes before the save sequence starts, so no recalculation here.
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( MonthlyPayment TotalIncome )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
+      APPEND VALUE #( %tky        = <ca>-%tky
+                      %state_area = state_area-dti ) TO reported-creditapplication.
+    ENDLOOP.
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>).
+
+      IF <credapp>-TotalIncome <= 0.
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky        = <credapp>-%tky
+                        %state_area = state_area-dti
+                        %msg        = new_message( id       = 'ZIK_CREDAPP'
+                                                   number   = '008'
+                                                   severity = if_abap_behv_message=>severity-error ) )
+               TO reported-creditapplication.
+        CONTINUE.
+      ENDIF.
+
+      DATA(ratio) = CONV decfloat34( <credapp>-MonthlyPayment ) / <credapp>-TotalIncome * 100.
+
+      IF ratio > dti_limit_percent.
+        APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+        APPEND VALUE #( %tky        = <credapp>-%tky
+                        %state_area = state_area-dti
+                        %msg        = new_message( id       = 'ZIK_CREDAPP'
+                                                   number   = '007'
+                                                   severity = if_abap_behv_message=>severity-error
+                                                   v1       = |{ CONV i( ratio ) }|
+                                                   v2       = |{ dti_limit_percent }| ) )
+               TO reported-creditapplication.
+      ENDIF.
+
+    ENDLOOP.
+
+  ENDMETHOD.
+
 ENDCLASS.
 
 CLASS lhc_income DEFINITION INHERITING FROM cl_abap_behavior_handler.
@@ -216,7 +506,7 @@ CLASS lhc_income IMPLEMENTATION.
       DATA totalamount TYPE zik_a_credapp-total_income.
       CLEAR totalamount.
 
-      LOOP AT incomes ASSIGNING FIELD-SYMBOL(<incomes>)
+      LOOP AT incomes USING KEY entity ASSIGNING FIELD-SYMBOL(<incomes>)
           WHERE ApplicationId = <credapps>-ApplicationId.
         DATA monthlyamount TYPE zik_a_credapp-total_income.
         IF <incomes>-CurrencyCode <> <credapps>-CurrencyCode.

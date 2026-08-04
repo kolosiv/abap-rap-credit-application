@@ -20,11 +20,24 @@ etag master LastChangedAt
   draft action Edit;
   draft action Activate optimized;
   draft action Discard;
-  draft determine action Prepare;
+  draft determine action Prepare
+  {
+    validation validateProduct;
+    validation validateCustomer;
+    validation validateAmount;
+    validation validateTerm;
+    validation validateDTI;
+  }
 
   determination setInitialStatus on modify { create; }
   determination copyInterestRate on modify { create; field ProductId; }
   determination calculateMonthlyPayment on modify { create; field Amount, TermMonths, InterestRate; }
+
+  validation validateProduct on save { create; field ProductId; }
+  validation validateCustomer on save { create; field CustomerId; }
+  validation validateAmount on save { create; field Amount, ProductId; }
+  validation validateTerm on save { create; field TermMonths, ProductId; }
+  validation validateDTI on save { create; field MonthlyPayment, TotalIncome; }
 
   field ( readonly ) ApplicationId;
   field ( readonly ) InterestRate, MonthlyPayment, TotalIncome, Status;

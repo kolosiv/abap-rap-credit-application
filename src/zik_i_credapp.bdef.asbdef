@@ -11,13 +11,13 @@ authorization master ( global )
 etag master LastChangedAt
 {
   create;
-  update;
-  delete;
+  update ( features : instance );
+  delete ( features : instance );
 
   association _Income { create; with draft; }
 
   draft action Resume;
-  draft action Edit;
+  draft action ( features : instance ) Edit;
   draft action Activate optimized;
   draft action Discard;
   draft determine action Prepare
@@ -38,6 +38,10 @@ etag master LastChangedAt
   validation validateAmount on save { create; field Amount, ProductId; }
   validation validateTerm on save { create; field TermMonths, ProductId; }
   validation validateDTI on save { create; field MonthlyPayment, TotalIncome; }
+
+  action ( features : instance ) Submit result [1] $self;
+  action ( features : instance ) Approve result [1] $self;
+  action ( features : instance ) Reject result [1] $self;
 
   field ( readonly ) ApplicationId;
   field ( readonly ) InterestRate, MonthlyPayment, TotalIncome, Status;

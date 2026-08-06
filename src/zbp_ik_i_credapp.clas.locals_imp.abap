@@ -2,7 +2,6 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS dti_limit_percent TYPE i VALUE 50.
 
-    " state areas - one per validation, so each validation clears only its own messages
     CONSTANTS: BEGIN OF state_area,
                  product  TYPE string VALUE 'VALIDATE_PRODUCT',
                  customer TYPE string VALUE 'VALIDATE_CUSTOMER',
@@ -11,9 +10,23 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
                  dti      TYPE string VALUE 'VALIDATE_DTI',
                END OF state_area.
 
+    CONSTANTS: BEGIN OF status,
+                 draft     TYPE zik_a_credapp-status VALUE 'DR',
+                 submitted TYPE zik_a_credapp-status VALUE 'SU',
+                 approved  TYPE zik_a_credapp-status VALUE 'AP',
+                 rejected  TYPE zik_a_credapp-status VALUE 'RJ',
+               END OF status.
+
+    TYPES tt_decide_keys   TYPE TABLE FOR ACTION IMPORT zik_i_credapp~Approve.
+    TYPES tt_decide_result TYPE TABLE FOR ACTION RESULT zik_i_credapp~Approve.
+    TYPES ts_failed        TYPE RESPONSE FOR FAILED zik_i_credapp.
+    TYPES ts_reported      TYPE RESPONSE FOR REPORTED zik_i_credapp.
+
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR CreditApplication
       RESULT result.
+    METHODS get_instance_features FOR INSTANCE FEATURES
+      IMPORTING keys REQUEST requested_features FOR CreditApplication RESULT result.
     METHODS setInitialStatus FOR DETERMINE ON MODIFY
       IMPORTING keys FOR CreditApplication~setInitialStatus.
     METHODS copyInterestRate FOR DETERMINE ON MODIFY
@@ -30,6 +43,19 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR CreditApplication~validateTerm.
     METHODS validateDTI FOR VALIDATE ON SAVE
       IMPORTING keys FOR CreditApplication~validateDTI.
+    METHODS Submit FOR MODIFY
+      IMPORTING keys FOR ACTION CreditApplication~Submit RESULT result.
+    METHODS Approve FOR MODIFY
+      IMPORTING keys FOR ACTION CreditApplication~Approve RESULT result.
+    METHODS Reject FOR MODIFY
+      IMPORTING keys FOR ACTION CreditApplication~Reject RESULT result.
+
+    METHODS decide
+      IMPORTING keys       TYPE tt_decide_keys
+                new_status TYPE zik_a_credapp-status
+      EXPORTING result     TYPE tt_decide_result
+      CHANGING  failed     TYPE ts_failed
+                reported   TYPE ts_reported.
 
     METHODS earlynumbering_create FOR NUMBERING
       IMPORTING entities FOR CREATE CreditApplication.
@@ -40,10 +66,48 @@ ENDCLASS.
 CLASS lhc_credapp IMPLEMENTATION.
 
   METHOD get_global_authorizations.
-    " TEMP scaffold to satisfy strict(2). Wave 5: replace with real authorization.
     result-%create = if_abap_behv=>auth-allowed.
     result-%update = if_abap_behv=>auth-allowed.
     result-%delete = if_abap_behv=>auth-allowed.
+  ENDMETHOD.
+
+  METHOD get_instance_features.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( Status )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    result = VALUE #( FOR ca IN credapps
+                      ( %tky              = ca-%tky
+
+                        %features-%update = COND #( WHEN ca-Status <> status-approved
+                                                     AND ca-Status <> status-rejected
+                                                    THEN if_abap_behv=>fc-o-enabled
+                                                    ELSE if_abap_behv=>fc-o-disabled )
+
+                        %action-Edit      = COND #( WHEN ca-Status <> status-approved
+                                                     AND ca-Status <> status-rejected
+                                                    THEN if_abap_behv=>fc-o-enabled
+                                                    ELSE if_abap_behv=>fc-o-disabled )
+
+                        %features-%delete = COND #( WHEN ca-Status = status-draft
+                                                    THEN if_abap_behv=>fc-o-enabled
+                                                    ELSE if_abap_behv=>fc-o-disabled )
+
+                        %action-Submit    = COND #( WHEN ca-Status = status-draft
+                                                    THEN if_abap_behv=>fc-o-enabled
+                                                    ELSE if_abap_behv=>fc-o-disabled )
+
+                        %action-Approve   = COND #( WHEN ca-Status = status-submitted
+                                                    THEN if_abap_behv=>fc-o-enabled
+                                                    ELSE if_abap_behv=>fc-o-disabled )
+
+                        %action-Reject    = COND #( WHEN ca-Status = status-submitted
+                                                    THEN if_abap_behv=>fc-o-enabled
+                                                    ELSE if_abap_behv=>fc-o-disabled ) ) ).
+
   ENDMETHOD.
 
   METHOD earlynumbering_create.
@@ -135,7 +199,7 @@ CLASS lhc_credapp IMPLEMENTATION.
       ENTITY CreditApplication
         UPDATE FIELDS ( Status )
         WITH VALUE #( FOR ca IN credapps ( %tky   = ca-%tky
-                                           Status = 'DR' ) )
+                                           Status = status-draft ) )
       REPORTED DATA(update_reported).
 
     reported = CORRESPONDING #( DEEP update_reported ).
@@ -212,7 +276,6 @@ CLASS lhc_credapp IMPLEMENTATION.
         WITH CORRESPONDING #( keys )
       RESULT DATA(credapps).
 
-    " clear own state messages of the previous run - unconditionally, for every instance
     LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
       APPEND VALUE #( %tky        = <ca>-%tky
                       %state_area = state_area-product ) TO reported-creditapplication.
@@ -305,7 +368,6 @@ CLASS lhc_credapp IMPLEMENTATION.
         WITH CORRESPONDING #( keys )
       RESULT DATA(credapps).
 
-    " must happen BEFORE the early RETURN below, otherwise stale messages would stick
     LOOP AT credapps ASSIGNING FIELD-SYMBOL(<ca>).
       APPEND VALUE #( %tky        = <ca>-%tky
                       %state_area = state_area-amount ) TO reported-creditapplication.
@@ -331,14 +393,12 @@ CLASS lhc_credapp IMPLEMENTATION.
 
     LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>).
 
-      " the product itself is checked by validateProduct - skip here to avoid duplicate messages
       READ TABLE products ASSIGNING FIELD-SYMBOL(<product>)
            WITH KEY ProductId = <credapp>-ProductId.
       IF sy-subrc <> 0.
         CONTINUE.
       ENDIF.
 
-      " limits are stored in the product's currency - convert the loan amount into it
       IF <credapp>-CurrencyCode = <product>-CurrencyCode.
         amount_in_product_ccy = <credapp>-Amount.
       ELSE.
@@ -429,8 +489,6 @@ CLASS lhc_credapp IMPLEMENTATION.
 
   METHOD validateDTI.
 
-    " MonthlyPayment and TotalIncome are already filled by the determinations:
-    " the interaction phase completes before the save sequence starts, so no recalculation here.
     READ ENTITIES OF zik_i_credapp IN LOCAL MODE
       ENTITY CreditApplication
         FIELDS ( MonthlyPayment TotalIncome )
@@ -469,6 +527,127 @@ CLASS lhc_credapp IMPLEMENTATION.
                TO reported-creditapplication.
       ENDIF.
 
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD Submit.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( Status )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    DATA(submittable) = credapps.
+    DELETE submittable WHERE Status <> status-draft.
+
+    IF submittable IS NOT INITIAL.
+
+      MODIFY ENTITIES OF zik_i_credapp IN LOCAL MODE
+        ENTITY CreditApplication
+          UPDATE FIELDS ( Status SubmittedAt )
+          WITH VALUE #( FOR ca IN submittable ( %tky        = ca-%tky
+                                                Status      = status-submitted
+                                                SubmittedAt = utclong_current( ) ) )
+        REPORTED DATA(update_reported).
+
+      reported = CORRESPONDING #( DEEP update_reported ).
+
+      READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+        ENTITY CreditApplication
+          ALL FIELDS
+          WITH CORRESPONDING #( submittable )
+        RESULT DATA(submitted).
+
+      result = VALUE #( FOR ca IN submitted ( %tky   = ca-%tky
+                                              %param = ca ) ).
+    ENDIF.
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>)
+        WHERE Status <> status-draft.
+      APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+      APPEND VALUE #( %tky = <credapp>-%tky
+                      %msg = new_message( id       = 'ZIK_CREDAPP'
+                                          number   = '010'
+                                          severity = if_abap_behv_message=>severity-error
+                                          v1       = |{ CONV i( <credapp>-ApplicationId ) }|
+                                          v2       = <credapp>-Status ) )
+             TO reported-creditapplication.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD Approve.
+
+    decide( EXPORTING keys       = CORRESPONDING #( keys )
+                      new_status = status-approved
+            IMPORTING result     = DATA(decided)
+            CHANGING  failed     = failed
+                      reported   = reported ).
+
+    result = CORRESPONDING #( decided ).
+
+  ENDMETHOD.
+
+  METHOD Reject.
+
+    decide( EXPORTING keys       = CORRESPONDING #( keys )
+                      new_status = status-rejected
+            IMPORTING result     = DATA(decided)
+            CHANGING  failed     = failed
+                      reported   = reported ).
+
+    result = CORRESPONDING #( decided ).
+
+  ENDMETHOD.
+
+  METHOD decide.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( Status )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    DATA(decidable) = credapps.
+    DELETE decidable WHERE Status <> status-submitted.
+
+    IF decidable IS NOT INITIAL.
+
+      MODIFY ENTITIES OF zik_i_credapp IN LOCAL MODE
+        ENTITY CreditApplication
+          UPDATE FIELDS ( Status DecidedAt DecidedBy )
+          WITH VALUE #( FOR ca IN decidable
+                        ( %tky      = ca-%tky
+                          Status    = new_status
+                          DecidedAt = utclong_current( )
+                          DecidedBy = cl_abap_context_info=>get_user_technical_name( ) ) )
+        REPORTED DATA(update_reported).
+
+      reported-creditapplication = VALUE #( BASE reported-creditapplication
+                                            ( LINES OF update_reported-creditapplication ) ).
+
+      READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+        ENTITY CreditApplication
+          ALL FIELDS
+          WITH CORRESPONDING #( decidable )
+        RESULT DATA(decided_apps).
+
+      result = VALUE #( FOR ca IN decided_apps ( %tky   = ca-%tky
+                                                 %param = ca ) ).
+    ENDIF.
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapp>)
+        WHERE Status <> status-submitted.
+      APPEND VALUE #( %tky = <credapp>-%tky ) TO failed-creditapplication.
+      APPEND VALUE #( %tky = <credapp>-%tky
+                      %msg = new_message( id       = 'ZIK_CREDAPP'
+                                          number   = '010'
+                                          severity = if_abap_behv_message=>severity-error
+                                          v1       = |{ CONV i( <credapp>-ApplicationId ) }|
+                                          v2       = <credapp>-Status ) )
+             TO reported-creditapplication.
     ENDLOOP.
 
   ENDMETHOD.

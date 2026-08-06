@@ -13,7 +13,14 @@ annotate entity ZIK_C_CREDAPP with
                  position:      20,
                  targetElement: '_Income' } ]
 
-  @UI: { lineItem: [ { position: 10 } ], identification: [ { position: 10 } ] }
+  @UI: { lineItem:       [ { position: 10 },
+                           { type: #FOR_ACTION, dataAction: 'Submit',  label: 'Submit' },
+                           { type: #FOR_ACTION, dataAction: 'Approve', label: 'Approve' },
+                           { type: #FOR_ACTION, dataAction: 'Reject',  label: 'Reject' } ],
+         identification: [ { position: 10 },
+                           { type: #FOR_ACTION, dataAction: 'Submit',  label: 'Submit' },
+                           { type: #FOR_ACTION, dataAction: 'Approve', label: 'Approve' },
+                           { type: #FOR_ACTION, dataAction: 'Reject',  label: 'Reject' } ] }
   ApplicationId;
 
   @UI: { lineItem: [ { position: 20 } ], identification: [ { position: 20 } ] }
@@ -42,4 +49,13 @@ annotate entity ZIK_C_CREDAPP with
 
   @UI: { identification: [ { position: 70 } ] }
   TotalIncome;
+
+  @UI: { identification: [ { position: 75 } ] }
+  SubmittedAt;
+
+  @UI: { identification: [ { position: 80 } ] }
+  DecidedAt;
+
+  @UI: { identification: [ { position: 85 } ] }
+  DecidedBy;
 }

@@ -13,6 +13,10 @@ define behavior for ZIK_C_CREDAPP alias CreditApplication
   use action Resume;
   use action Prepare;
 
+  use action Submit;
+  use action Approve;
+  use action Reject;
+
   use association _Income { create; with draft; }
 }
 

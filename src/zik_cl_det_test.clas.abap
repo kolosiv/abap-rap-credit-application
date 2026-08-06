@@ -7,62 +7,67 @@ ENDCLASS.
 CLASS zik_cl_det_test IMPLEMENTATION.
   METHOD if_oo_adt_classrun~main.
 
-    " ---- 1. CREATE with product CONSUMER ----
+    " ---- 1. CREATE application together with one income (create by association) ----
     MODIFY ENTITIES OF zik_i_credapp
       ENTITY CreditApplication
         CREATE FIELDS ( CustomerId ProductId Amount TermMonths CurrencyCode )
-          WITH VALUE #( ( %cid       = 'C1'
-                          CustomerId = '00000001'
-                          ProductId  = 'CONSUMER'
-                          Amount     = '10000.00'
-                          TermMonths = '012'
+          WITH VALUE #( ( %cid         = 'APP1'
+                          CustomerId   = '00000001'
+                          ProductId    = 'CONSUMER'
+                          Amount       = '20000.00'
+                          TermMonths   = '024'
                           CurrencyCode = 'EUR' ) )
+        CREATE BY \_Income
+          FIELDS ( IncomeType MonthlyAmount CurrencyCode )
+          WITH VALUE #( ( %cid_ref = 'APP1'
+                          %target  = VALUE #( ( %cid          = 'INC1'
+                                                IncomeType    = 'SA'
+                                                MonthlyAmount = '3000.00'
+                                                CurrencyCode  = 'EUR' ) ) ) )
       MAPPED DATA(mapped)
       FAILED DATA(failed_create)
       REPORTED DATA(reported_create).
 
-    COMMIT ENTITIES RESPONSE OF zik_i_credapp
-      FAILED DATA(commit_failed)
-      REPORTED DATA(commit_reported).
-
     IF mapped-creditapplication IS INITIAL.
       out->write( 'CREATE failed' ).
       out->write( failed_create ).
+      out->write( reported_create ).
       RETURN.
     ENDIF.
 
     DATA(new_key) = mapped-creditapplication[ 1 ]-%key.
     out->write( |Created ApplicationId = { new_key-ApplicationId }| ).
 
-    " ---- 2. READ after create ----
-    READ ENTITIES OF zik_i_credapp
-      ENTITY CreditApplication
-        FIELDS ( ProductId InterestRate MonthlyPayment Status )
-        WITH VALUE #( ( %key = new_key ) )
-      RESULT DATA(after_create).
-    out->write( '--- after CREATE (expect CONSUMER, rate 15.9) ---' ).
-    out->write( after_create ).
-
-    " ---- 3. UPDATE product -> MORTGAGE ----
-    MODIFY ENTITIES OF zik_i_credapp
-      ENTITY CreditApplication
-        UPDATE FIELDS ( ProductId )
-          WITH VALUE #( ( %key = new_key ProductId = 'MORTGAGE' ) )
-      FAILED DATA(failed_upd)
-      REPORTED DATA(reported_upd).
-
     COMMIT ENTITIES RESPONSE OF zik_i_credapp
-      FAILED DATA(commit_failed2)
-      REPORTED DATA(commit_reported2).
+      FAILED DATA(commit_failed)
+      REPORTED DATA(commit_reported).
 
-    " ---- 4. READ after update ----
+    IF commit_failed IS NOT INITIAL.
+      out->write( 'COMMIT failed - validations blocked the save:' ).
+      out->write( commit_failed ).
+      out->write( commit_reported ).
+    ELSE.
+      out->write( 'COMMIT ok' ).
+    ENDIF.
+
+    " ---- 2. read back what the determinations produced ----
     READ ENTITIES OF zik_i_credapp
       ENTITY CreditApplication
-        FIELDS ( ProductId InterestRate MonthlyPayment Status )
+        FIELDS ( Amount TermMonths InterestRate MonthlyPayment TotalIncome Status )
         WITH VALUE #( ( %key = new_key ) )
-      RESULT DATA(after_update).
-    out->write( '--- after UPDATE product=MORTGAGE (expect rate 8.5 if on-modify works) ---' ).
-    out->write( after_update ).
+      RESULT DATA(after).
+
+    out->write( '--- expect InterestRate 15.9, MonthlyPayment ~975, TotalIncome 3000 ---' ).
+    out->write( after ).
+
+    " ---- 3. read the children ----
+    READ ENTITIES OF zik_i_credapp
+      ENTITY CreditApplication BY \_Income
+        ALL FIELDS WITH VALUE #( ( %key = new_key ) )
+      RESULT DATA(incomes).
+
+    out->write( '--- incomes of that application ---' ).
+    out->write( incomes ).
 
   ENDMETHOD.
 ENDCLASS.

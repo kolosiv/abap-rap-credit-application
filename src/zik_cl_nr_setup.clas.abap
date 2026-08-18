@@ -7,7 +7,11 @@ CLASS zik_cl_nr_setup DEFINITION
     CONSTANTS c_range  TYPE c LENGTH 2 VALUE '01'.
 ENDCLASS.
 
-CLASS zik_cl_nr_setup IMPLEMENTATION.
+
+
+CLASS ZIK_CL_NR_SETUP IMPLEMENTATION.
+
+
   METHOD if_oo_adt_classrun~main.
 
     " ---- 1. Interval 01 (rerun-safe: catch and show) ----

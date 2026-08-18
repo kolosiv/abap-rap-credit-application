@@ -4,7 +4,11 @@ CLASS zik_cl_det_test DEFINITION
     INTERFACES if_oo_adt_classrun.
 ENDCLASS.
 
-CLASS zik_cl_det_test IMPLEMENTATION.
+
+
+CLASS ZIK_CL_DET_TEST IMPLEMENTATION.
+
+
   METHOD if_oo_adt_classrun~main.
 
     " ---- 1. CREATE application together with one income (create by association) ----

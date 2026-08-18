@@ -6,7 +6,10 @@ CLASS zik_cl_demo_data DEFINITION
     INTERFACES if_oo_adt_classrun.
 ENDCLASS.
 
-CLASS zik_cl_demo_data IMPLEMENTATION.
+
+
+CLASS ZIK_CL_DEMO_DATA IMPLEMENTATION.
+
 
   METHOD if_oo_adt_classrun~main.
 
@@ -37,5 +40,4 @@ CLASS zik_cl_demo_data IMPLEMENTATION.
     out->write( |Products inserted: { sy-dbcnt }| ).
 
   ENDMETHOD.
-
 ENDCLASS.

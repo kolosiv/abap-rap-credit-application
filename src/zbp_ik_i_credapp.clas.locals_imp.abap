@@ -49,6 +49,8 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR ACTION CreditApplication~Approve RESULT result.
     METHODS Reject FOR MODIFY
       IMPORTING keys FOR ACTION CreditApplication~Reject RESULT result.
+    METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
+      keys REQUEST requested_authorizations FOR CreditApplication RESULT result.
 
     METHODS decide
       IMPORTING keys       TYPE tt_decide_keys
@@ -648,6 +650,56 @@ CLASS lhc_credapp IMPLEMENTATION.
                                           v1       = |{ CONV i( <credapp>-ApplicationId ) }|
                                           v2       = <credapp>-Status ) )
              TO reported-creditapplication.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD get_instance_authorizations.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( CreatedBy )
+        WITH CORRESPONDING #( keys )
+      RESULT DATA(credapps).
+
+    DATA(current_user) = cl_abap_context_info=>get_user_technical_name( ).
+
+    DATA(update_requested)  = xsdbool( requested_authorizations-%update         = if_abap_behv=>mk-on
+                                    OR requested_authorizations-%action-Edit    = if_abap_behv=>mk-on ).
+    DATA(delete_requested)  = xsdbool( requested_authorizations-%delete         = if_abap_behv=>mk-on ).
+    DATA(approve_requested) = xsdbool( requested_authorizations-%action-Approve = if_abap_behv=>mk-on ).
+    DATA(reject_requested)  = xsdbool( requested_authorizations-%action-Reject  = if_abap_behv=>mk-on ).
+
+    LOOP AT credapps INTO DATA(credapp).
+
+      DATA(is_owner) = xsdbool( credapp-CreatedBy = current_user ).
+
+      APPEND VALUE #( %tky = credapp-%tky ) TO result ASSIGNING FIELD-SYMBOL(<auth>).
+
+      IF update_requested = abap_true.
+        <auth>-%update = COND #( WHEN is_owner = abap_true
+                                 THEN if_abap_behv=>auth-allowed
+                                 ELSE if_abap_behv=>auth-unauthorized ).
+      ENDIF.
+
+      IF delete_requested = abap_true.
+        <auth>-%delete = COND #( WHEN is_owner = abap_true
+                                 THEN if_abap_behv=>auth-allowed
+                                 ELSE if_abap_behv=>auth-unauthorized ).
+      ENDIF.
+
+      IF approve_requested = abap_true.
+        <auth>-%action-Approve = COND #( WHEN is_owner = abap_true
+                                         THEN if_abap_behv=>auth-unauthorized
+                                         ELSE if_abap_behv=>auth-allowed ).
+      ENDIF.
+
+      IF reject_requested = abap_true.
+        <auth>-%action-Reject = COND #( WHEN is_owner = abap_true
+                                        THEN if_abap_behv=>auth-unauthorized
+                                        ELSE if_abap_behv=>auth-allowed ).
+      ENDIF.
+
     ENDLOOP.
 
   ENDMETHOD.

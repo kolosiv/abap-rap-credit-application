@@ -4,7 +4,11 @@ CLASS zik_cl_fx_seed DEFINITION
     INTERFACES if_oo_adt_classrun.
 ENDCLASS.
 
-CLASS zik_cl_fx_seed IMPLEMENTATION.
+
+
+CLASS ZIK_CL_FX_SEED IMPLEMENTATION.
+
+
   METHOD if_oo_adt_classrun~main.
 
     DELETE FROM zik_a_fxrate.

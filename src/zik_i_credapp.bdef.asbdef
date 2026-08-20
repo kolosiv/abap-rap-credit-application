@@ -17,7 +17,7 @@ etag master LastChangedAt
   association _Income { create; with draft; }
 
   draft action Resume;
-  draft action ( features : instance ) Edit;
+  draft action ( features : instance, authorization : update ) Edit;
   draft action Activate optimized;
   draft action Discard;
   draft determine action Prepare

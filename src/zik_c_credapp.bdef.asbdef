@@ -1,4 +1,5 @@
 projection;
+strict ( 2 );
 use draft;
 
 define behavior for ZIK_C_CREDAPP alias CreditApplication
@@ -11,6 +12,7 @@ define behavior for ZIK_C_CREDAPP alias CreditApplication
   use action Activate;
   use action Discard;
   use action Resume;
+
   use action Prepare;
 
   use action Submit;
@@ -18,6 +20,13 @@ define behavior for ZIK_C_CREDAPP alias CreditApplication
   use action Reject;
 
   use association _Income { create; with draft; }
+
+  side effects
+  {
+    field Amount     affects field MonthlyPayment, field TotalCost, field Overpayment;
+    field TermMonths affects field MonthlyPayment, field TotalCost, field Overpayment;
+    field ProductId  affects field InterestRate, field MonthlyPayment, field TotalCost, field Overpayment;
+  }
 }
 
 define behavior for ZIK_C_INCOME alias Income

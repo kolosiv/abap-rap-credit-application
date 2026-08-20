@@ -1,5 +1,8 @@
 @EndUserText.label: 'Credit Application UI service'
 define service ZIK_UI_CREDAPP {
-  expose ZIK_C_CREDAPP as CreditApplication;
-  expose ZIK_C_INCOME  as IncomeSource;
+  expose ZIK_C_CREDAPP     as CreditApplication;
+  expose ZIK_C_INCOME      as IncomeSource;
+  expose ZIK_I_CUSTOMER_VH as CustomerVH;
+  expose ZIK_I_PRODUCT_VH  as ProductVH;
+  expose I_CurrencyStdVH   as CurrencyVH;
 }

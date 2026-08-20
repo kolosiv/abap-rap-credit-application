@@ -4,13 +4,31 @@ annotate entity ZIK_C_CREDAPP with
   @UI.facet: [ { id:       'Application',
                  purpose:  #STANDARD,
                  type:     #IDENTIFICATION_REFERENCE,
-                 label:    'Credit Application',
+                 label:    'General',
                  position: 10 },
+               { id:              'Terms',
+                 purpose:         #STANDARD,
+                 type:            #FIELDGROUP_REFERENCE,
+                 label:           'Loan Terms',
+                 position:        20,
+                 targetQualifier: 'Terms' },
+               { id:              'Calculation',
+                 purpose:         #STANDARD,
+                 type:            #FIELDGROUP_REFERENCE,
+                 label:           'Calculation',
+                 position:        30,
+                 targetQualifier: 'Calculation' },
+               { id:              'Decision',
+                 purpose:         #STANDARD,
+                 type:            #FIELDGROUP_REFERENCE,
+                 label:           'Decision',
+                 position:        40,
+                 targetQualifier: 'Decision' },
                { id:            'Income',
                  purpose:       #STANDARD,
                  type:          #LINEITEM_REFERENCE,
                  label:         'Income Sources',
-                 position:      20,
+                 position:      50,
                  targetElement: '_Income' } ]
 
   @UI: { lineItem:       [ { position: 10 },
@@ -23,39 +41,54 @@ annotate entity ZIK_C_CREDAPP with
                            { type: #FOR_ACTION, dataAction: 'Reject',  label: 'Reject' } ] }
   ApplicationId;
 
-  @UI: { lineItem: [ { position: 20 } ], identification: [ { position: 20 } ] }
+  @UI: { lineItem:       [ { position: 20 } ],
+         identification: [ { position: 20 } ],
+         selectionField: [ { position: 20 } ] }
   CustomerId;
 
-  @UI: { lineItem: [ { position: 30 } ], identification: [ { position: 30 } ] }
+  @UI: { lineItem:       [ { position: 30 } ],
+         identification: [ { position: 30 } ],
+         selectionField: [ { position: 30 } ] }
   ProductId;
 
-  @UI: { lineItem: [ { position: 40 } ], identification: [ { position: 40 } ] }
-  Amount;
-
-  @UI: { identification: [ { position: 45 } ] }
-  CurrencyCode;
-
-  @UI: { lineItem: [ { position: 50 } ], identification: [ { position: 50 } ] }
-  TermMonths;
-
-  @UI: { identification: [ { position: 55 } ] }
-  InterestRate;
-
-  @UI: { lineItem: [ { position: 60 } ], identification: [ { position: 60 } ] }
+  @UI: { lineItem:       [ { position: 60, criticality: 'StatusCriticality' } ],
+         identification: [ { position: 40, criticality: 'StatusCriticality' } ],
+         selectionField: [ { position: 10 } ] }
   Status;
 
-  @UI: { identification: [ { position: 65 } ] }
+  @UI.fieldGroup: [ { qualifier: 'Terms', position: 10 } ]
+  @UI.lineItem:   [ { position: 40 } ]
+  Amount;
+
+  @UI.fieldGroup: [ { qualifier: 'Terms', position: 20 } ]
+  CurrencyCode;
+
+  @UI.fieldGroup: [ { qualifier: 'Terms', position: 30 } ]
+  @UI.lineItem:   [ { position: 50 } ]
+  TermMonths;
+
+  @UI.fieldGroup: [ { qualifier: 'Terms', position: 40 } ]
+  InterestRate;
+
+  @UI.fieldGroup: [ { qualifier: 'Calculation', position: 10 } ]
+  @UI.lineItem:   [ { position: 70 } ]
   MonthlyPayment;
 
-  @UI: { identification: [ { position: 70 } ] }
+  @UI.fieldGroup: [ { qualifier: 'Calculation', position: 20 } ]
   TotalIncome;
 
-  @UI: { identification: [ { position: 75 } ] }
+  @UI.fieldGroup: [ { qualifier: 'Calculation', position: 30 } ]
+  TotalCost;
+
+  @UI.fieldGroup: [ { qualifier: 'Calculation', position: 40 } ]
+  Overpayment;
+
+  @UI.fieldGroup: [ { qualifier: 'Decision', position: 10 } ]
   SubmittedAt;
 
-  @UI: { identification: [ { position: 80 } ] }
+  @UI.fieldGroup: [ { qualifier: 'Decision', position: 20 } ]
   DecidedAt;
 
-  @UI: { identification: [ { position: 85 } ] }
+  @UI.fieldGroup: [ { qualifier: 'Decision', position: 30 } ]
   DecidedBy;
 }

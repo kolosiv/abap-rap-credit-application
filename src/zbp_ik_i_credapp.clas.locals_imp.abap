@@ -50,7 +50,7 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS Reject FOR MODIFY
       IMPORTING keys FOR ACTION CreditApplication~Reject RESULT result.
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
-      keys REQUEST requested_authorizations FOR CreditApplication RESULT result.
+      IMPORTING keys REQUEST requested_authorizations FOR CreditApplication RESULT result.
 
     METHODS decide
       IMPORTING keys       TYPE tt_decide_keys
@@ -664,8 +664,7 @@ CLASS lhc_credapp IMPLEMENTATION.
 
     DATA(current_user) = cl_abap_context_info=>get_user_technical_name( ).
 
-    DATA(update_requested)  = xsdbool( requested_authorizations-%update         = if_abap_behv=>mk-on
-                                    OR requested_authorizations-%action-Edit    = if_abap_behv=>mk-on ).
+    DATA(update_requested)  = xsdbool( requested_authorizations-%update         = if_abap_behv=>mk-on ).
     DATA(delete_requested)  = xsdbool( requested_authorizations-%delete         = if_abap_behv=>mk-on ).
     DATA(approve_requested) = xsdbool( requested_authorizations-%action-Approve = if_abap_behv=>mk-on ).
     DATA(reject_requested)  = xsdbool( requested_authorizations-%action-Reject  = if_abap_behv=>mk-on ).
@@ -766,3 +765,4 @@ CLASS lhc_income IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+

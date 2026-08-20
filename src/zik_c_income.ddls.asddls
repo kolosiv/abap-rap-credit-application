@@ -9,6 +9,8 @@ define view entity ZIK_C_INCOME
       IncomeType,
       @Semantics.amount.currencyCode: 'CurrencyCode'
       MonthlyAmount,
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CurrencyStdVH', element: 'Currency' },
+                                           useForValidation: true }]
       CurrencyCode,
       IsDocumented,
       EmployerName,

@@ -1,6 +1,16 @@
 @Metadata.layer: #CORE
+@UI.headerInfo: { typeName:       'Income Source',
+                  typeNamePlural: 'Income Sources',
+                  title:          { type: #STANDARD, value: 'EmployerName' },
+                  description:    { type: #STANDARD, value: 'IncomeType' } }
 annotate entity ZIK_C_INCOME with
 {
+  @UI.facet: [ { id:       'Income',
+                 purpose:  #STANDARD,
+                 type:     #IDENTIFICATION_REFERENCE,
+                 label:    'Income Source',
+                 position: 10 } ]
+
   @UI.lineItem: [ { position: 10 } ]
   @UI.identification: [ { position: 10 } ]
   IncomeId;
@@ -12,10 +22,6 @@ annotate entity ZIK_C_INCOME with
   @UI.lineItem: [ { position: 30 } ]
   @UI.identification: [ { position: 30 } ]
   MonthlyAmount;
-
-  @UI.lineItem: [ { position: 35 } ]
-  @UI.identification: [ { position: 35 } ]
-  CurrencyCode;
 
   @UI.lineItem: [ { position: 40 } ]
   @UI.identification: [ { position: 40 } ]

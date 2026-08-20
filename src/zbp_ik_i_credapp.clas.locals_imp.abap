@@ -84,13 +84,11 @@ CLASS lhc_credapp IMPLEMENTATION.
     result = VALUE #( FOR ca IN credapps
                       ( %tky              = ca-%tky
 
-                        %features-%update = COND #( WHEN ca-Status <> status-approved
-                                                     AND ca-Status <> status-rejected
+                        %features-%update = COND #( WHEN ca-Status = status-draft
                                                     THEN if_abap_behv=>fc-o-enabled
                                                     ELSE if_abap_behv=>fc-o-disabled )
 
-                        %action-Edit      = COND #( WHEN ca-Status <> status-approved
-                                                     AND ca-Status <> status-rejected
+                        %action-Edit      = COND #( WHEN ca-Status = status-draft
                                                     THEN if_abap_behv=>fc-o-enabled
                                                     ELSE if_abap_behv=>fc-o-disabled )
 

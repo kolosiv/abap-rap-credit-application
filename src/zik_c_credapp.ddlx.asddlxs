@@ -60,9 +60,6 @@ annotate entity ZIK_C_CREDAPP with
   @UI.lineItem:   [ { position: 40 } ]
   Amount;
 
-  @UI.fieldGroup: [ { qualifier: 'Terms', position: 20 } ]
-  CurrencyCode;
-
   @UI.fieldGroup: [ { qualifier: 'Terms', position: 30 } ]
   @UI.lineItem:   [ { position: 50 } ]
   TermMonths;

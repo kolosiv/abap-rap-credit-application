@@ -6,12 +6,24 @@ define view entity ZIK_C_INCOME
 {
   key ApplicationId,
   key IncomeId,
+
+      @ObjectModel.text.element: ['IncomeTypeText']
+      @UI.textArrangement: #TEXT_ONLY
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZIK_I_INCTYPE_VH', element: 'IncomeType' },
+                                           useForValidation: true }]
       IncomeType,
+
+      @UI.hidden: true
+      @Semantics.text: true
+      _IncomeType.Description as IncomeTypeText,
+
       @Semantics.amount.currencyCode: 'CurrencyCode'
       MonthlyAmount,
+
       @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CurrencyStdVH', element: 'Currency' },
                                            useForValidation: true }]
       CurrencyCode,
+
       IsDocumented,
       EmployerName,
       LocalLastChangedAt,

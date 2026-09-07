@@ -32,6 +32,7 @@ etag master LastChangedAt
   determination setInitialStatus on modify { create; }
   determination copyInterestRate on modify { create; field ProductId; }
   determination calculateMonthlyPayment on modify { create; field Amount, TermMonths, InterestRate; }
+  determination recalculateTotalIncome on modify { field CurrencyCode; }
 
   validation validateProduct on save { create; field ProductId; }
   validation validateCustomer on save { create; field CustomerId; }

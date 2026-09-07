@@ -23,9 +23,10 @@ define behavior for ZIK_C_CREDAPP alias CreditApplication
 
   side effects
   {
-    field Amount     affects field MonthlyPayment, field TotalCost, field Overpayment;
-    field TermMonths affects field MonthlyPayment, field TotalCost, field Overpayment;
-    field ProductId  affects field InterestRate, field MonthlyPayment, field TotalCost, field Overpayment;
+    field Amount       affects field MonthlyPayment, field TotalCost, field Overpayment, field TotalIncome;
+    field TermMonths   affects field MonthlyPayment, field TotalCost, field Overpayment;
+    field ProductId    affects field InterestRate, field MonthlyPayment, field TotalCost, field Overpayment;
+    field CurrencyCode affects field TotalIncome;
   }
 }
 
@@ -35,4 +36,10 @@ define behavior for ZIK_C_INCOME alias Income
   use delete;
 
   use association _Application { with draft; }
+
+  side effects
+  {
+    field MonthlyAmount affects entity _Application;
+    field CurrencyCode  affects entity _Application;
+  }
 }

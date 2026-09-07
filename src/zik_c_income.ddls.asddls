@@ -20,7 +20,7 @@ define view entity ZIK_C_INCOME
       @Semantics.amount.currencyCode: 'CurrencyCode'
       MonthlyAmount,
 
-      @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CurrencyStdVH', element: 'Currency' },
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZIK_I_CURRENCY_VH', element: 'Currency' },
                                            useForValidation: true }]
       CurrencyCode,
 

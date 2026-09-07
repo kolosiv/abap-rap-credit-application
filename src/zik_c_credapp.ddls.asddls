@@ -35,7 +35,7 @@ define root view entity ZIK_C_CREDAPP
       @Semantics.amount.currencyCode: 'CurrencyCode'
       Amount,
 
-      @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CurrencyStdVH', element: 'Currency' },
+      @Consumption.valueHelpDefinition: [{ entity: { name: 'ZIK_I_CURRENCY_VH', element: 'Currency' },
                                            useForValidation: true }]
       CurrencyCode,
 

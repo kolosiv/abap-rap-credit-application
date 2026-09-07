@@ -1,3 +1,83 @@
+CLASS lcl_income_total DEFINITION CREATE PRIVATE.
+  PUBLIC SECTION.
+    TYPES tt_app_keys      TYPE TABLE FOR READ IMPORT zik_i_credapp.
+    TYPES ts_reported_late TYPE RESPONSE FOR REPORTED LATE zik_i_credapp.
+
+    CLASS-METHODS recalculate
+      IMPORTING application_keys TYPE tt_app_keys
+      CHANGING  reported         TYPE ts_reported_late.
+ENDCLASS.
+
+CLASS lcl_income_total IMPLEMENTATION.
+
+  METHOD recalculate.
+
+    DATA(app_keys) = application_keys.
+    SORT app_keys BY ApplicationId ASCENDING.
+    DELETE ADJACENT DUPLICATES FROM app_keys COMPARING ApplicationId.
+    IF app_keys IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        FIELDS ( CurrencyCode )
+        WITH CORRESPONDING #( app_keys )
+      RESULT DATA(credapps).
+
+    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication BY \_Income
+        ALL FIELDS WITH CORRESPONDING #( credapps )
+      RESULT DATA(incomes).
+
+    SELECT from_currency, to_currency, rate
+      FROM zik_a_fxrate
+      INTO TABLE @DATA(rates).
+
+    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<app>).
+
+      DATA total TYPE zik_a_credapp-total_income.
+      CLEAR total.
+
+      LOOP AT incomes USING KEY entity ASSIGNING FIELD-SYMBOL(<income>)
+           WHERE ApplicationId = <app>-ApplicationId.
+
+        IF <income>-CurrencyCode = <app>-CurrencyCode.
+          total = total + <income>-MonthlyAmount.
+          CONTINUE.
+        ENDIF.
+
+        DATA(rate) = VALUE #( rates[ from_currency = <income>-CurrencyCode
+                                     to_currency   = <app>-CurrencyCode ]-rate OPTIONAL ).
+        IF rate IS INITIAL.
+          CONTINUE.
+        ENDIF.
+
+        total = total + <income>-MonthlyAmount * rate.
+
+      ENDLOOP.
+
+      <app>-TotalIncome = total.
+
+    ENDLOOP.
+
+    MODIFY ENTITIES OF zik_i_credapp IN LOCAL MODE
+      ENTITY CreditApplication
+        UPDATE FIELDS ( TotalIncome )
+        WITH VALUE #( FOR ca IN credapps ( %tky        = ca-%tky
+                                           TotalIncome = ca-TotalIncome ) )
+      REPORTED DATA(update_reported).
+
+    DATA(modify_reported) = CORRESPONDING ts_reported_late( DEEP update_reported ).
+
+    reported-creditapplication = VALUE #( BASE reported-creditapplication
+                                          ( LINES OF modify_reported-creditapplication ) ).
+
+  ENDMETHOD.
+
+ENDCLASS.
+
+
 CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
   PRIVATE SECTION.
     CONSTANTS dti_limit_percent TYPE i VALUE 50.
@@ -33,6 +113,8 @@ CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR CreditApplication~copyInterestRate.
     METHODS calculateMonthlyPayment FOR DETERMINE ON MODIFY
       IMPORTING keys FOR CreditApplication~calculateMonthlyPayment.
+    METHODS recalculateTotalIncome FOR DETERMINE ON MODIFY
+      IMPORTING keys FOR CreditApplication~recalculateTotalIncome.
     METHODS validateProduct FOR VALIDATE ON SAVE
       IMPORTING keys FOR CreditApplication~validateProduct.
     METHODS validateCustomer FOR VALIDATE ON SAVE
@@ -265,6 +347,14 @@ CLASS lhc_credapp IMPLEMENTATION.
         REPORTED DATA(update_reported).
 
     reported = CORRESPONDING #( DEEP update_reported ).
+
+  ENDMETHOD.
+
+  METHOD recalculateTotalIncome.
+
+    lcl_income_total=>recalculate(
+      EXPORTING application_keys = CORRESPONDING #( keys )
+      CHANGING  reported         = reported ).
 
   ENDMETHOD.
 
@@ -713,52 +803,9 @@ CLASS lhc_income IMPLEMENTATION.
 
   METHOD calculateTotalIncome.
 
-    DATA(credinc) = keys.
-    SORT credinc BY ApplicationId ASCENDING.
-    DELETE ADJACENT DUPLICATES FROM credinc COMPARING ApplicationId.
-
-    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
-      ENTITY CreditApplication
-        FIELDS ( CurrencyCode )
-        WITH CORRESPONDING #( credinc )
-      RESULT DATA(credapps).
-
-    READ ENTITIES OF zik_i_credapp IN LOCAL MODE
-      ENTITY CreditApplication BY \_Income
-        ALL FIELDS WITH CORRESPONDING #( credapps )
-      RESULT DATA(incomes).
-
-    SELECT from_currency, to_currency, rate FROM zik_a_fxrate INTO TABLE @DATA(rates).
-
-    LOOP AT credapps ASSIGNING FIELD-SYMBOL(<credapps>).
-      DATA totalamount TYPE zik_a_credapp-total_income.
-      CLEAR totalamount.
-
-      LOOP AT incomes USING KEY entity ASSIGNING FIELD-SYMBOL(<incomes>)
-          WHERE ApplicationId = <credapps>-ApplicationId.
-        DATA monthlyamount TYPE zik_a_credapp-total_income.
-        IF <incomes>-CurrencyCode <> <credapps>-CurrencyCode.
-          DATA(rate) = VALUE #( rates[ from_currency = <incomes>-CurrencyCode
-                                       to_currency   = <credapps>-CurrencyCode ]-rate OPTIONAL ).
-          monthlyamount = <incomes>-MonthlyAmount * rate.
-        ELSE.
-          monthlyamount = <incomes>-MonthlyAmount.
-        ENDIF.
-        totalamount = totalamount + monthlyamount.
-      ENDLOOP.
-
-      <credapps>-TotalIncome = totalamount.
-    ENDLOOP.
-
-    MODIFY ENTITIES OF zik_i_credapp IN LOCAL MODE
-      ENTITY CreditApplication
-        UPDATE FIELDS ( TotalIncome )
-        WITH VALUE #( FOR ca IN credapps
-                      ( %tky        = ca-%tky
-                        TotalIncome = ca-TotalIncome ) )
-      REPORTED DATA(update_reported).
-
-    reported = CORRESPONDING #( DEEP update_reported ).
+    lcl_income_total=>recalculate(
+      EXPORTING application_keys = CORRESPONDING #( keys )
+      CHANGING  reported         = reported ).
 
   ENDMETHOD.
 

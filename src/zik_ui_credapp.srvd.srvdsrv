@@ -5,5 +5,5 @@ define service ZIK_UI_CREDAPP {
   expose ZIK_I_CUSTOMER_VH as CustomerVH;
   expose ZIK_I_PRODUCT_VH  as ProductVH;
   expose ZIK_I_INCTYPE_VH  as IncomeTypeVH;
-  expose I_CurrencyStdVH   as CurrencyVH;
+  expose ZIK_I_CURRENCY_VH as CurrencyVH;
 }

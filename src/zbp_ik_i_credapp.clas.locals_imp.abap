@@ -1,3 +1,5 @@
+CLASS ltc_credapp DEFINITION DEFERRED FOR TESTING.
+
 CLASS lcl_income_total DEFINITION CREATE PRIVATE.
   PUBLIC SECTION.
     TYPES tt_app_keys      TYPE TABLE FOR READ IMPORT zik_i_credapp.
@@ -78,7 +80,9 @@ CLASS lcl_income_total IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler.
+CLASS lhc_credapp DEFINITION INHERITING FROM cl_abap_behavior_handler
+  FRIENDS ltc_credapp.
+
   PRIVATE SECTION.
     CONSTANTS dti_limit_percent TYPE i VALUE 50.
 
